@@ -1,0 +1,22 @@
+# Build output (published through GitHub Releases)
+build/
+dist/
+.cache/
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Compiled C++
+*.o
+*.exe
+capstone/shop
+capstone/sales.csv
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
