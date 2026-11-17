@@ -1,0 +1,481 @@
+---
+num: 17
+title: Building a Real Project
+tagline: Multi-file programs, debugging, testing, and the Ruwan Stores Manager
+learn: split a program into header and source files; use include guards; compile and link several files; find bugs with a debugger and with assert; handle errors with a first look at exceptions; build and run the complete Ruwan Stores Manager; plan what to learn next
+---
+
+## Opening day
+
+:::story
+Ruwan: So, child. Seventeen weeks. Is my program ready?
+
+Amaya: Almost, Uncle. It can remember your products, record sales, warn you about low stock and save everything to a file. But it is one huge file now. 600 lines.
+
+Nuwan: Then let's do what real teams do. Split it into modules, each with one job, test it, and ship it. Today you stop writing exercises and start writing **software**.
+:::
+
+## Why split a program into files?
+
+Real projects have thousands or millions of lines of code. Nobody keeps that in one file. Splitting a program into several files gives you:
+
+- **Organisation.** Everything about products lives in one place, everything about input in another.
+- **Teamwork.** Two people can work on different files at the same time without getting in each other's way.
+- **Faster builds.** When you change one file, only that file needs to be recompiled.
+- **Reuse.** A well-written `input.cpp` can be copied into your next project unchanged.
+
+## Header files and source files
+
+C++ projects usually split each module into **two** files:
+
+| File | Extension | Contains | Think of it as |
+|---|---|---|---|
+| **Header file** | `.h` (or `.hpp`) | **declarations**: struct definitions, function prototypes, constants | the menu: what is available |
+| **Source file** | `.cpp` | **definitions**: the actual function bodies | the kitchen: how it is made |
+
+Other files `#include` the header to learn what exists. The linker (Chapter 2) connects the calls to the definitions.
+
+Here is a tiny example module:
+
+```cpp group=money file=money.h title=money.h
+#ifndef MONEY_H          //@ include guard: if MONEY_H is not defined yet...
+#define MONEY_H          //@ ...define it, and read the rest of the file
+
+#include <string>
+
+double applyVat(double amount);
+std::string formatRupees(double amount);   //@ std:: in headers, never "using namespace std"
+
+#endif                   //@ end of the include guard
+```
+
+```cpp group=money file=money.cpp title=money.cpp
+#include "money.h"       //@ quotes: look in my project folder first
+#include <sstream>
+#include <iomanip>
+using namespace std;     //@ fine inside a .cpp file
+
+const double VAT_RATE = 0.18;   // example rate only
+
+double applyVat(double amount) {
+    return amount * (1 + VAT_RATE);
+}
+
+string formatRupees(double amount) {
+    ostringstream out;
+    out << "Rs. " << fixed << setprecision(2) << amount;
+    return out.str();
+}
+```
+
+```cpp group=money file=main.cpp run title=main.cpp
+#include <iostream>
+#include "money.h"
+using namespace std;
+
+int main() {
+    cout << formatRupees(applyVat(1000)) << endl;
+    return 0;
+}
+```
+
+```output
+Rs. 1180.00
+```
+
+### Include guards
+
+If two different headers both include `money.h`, the compiler could see the same struct definition twice, which is an error. The **include guard** (`#ifndef ... #define ... #endif`) makes sure the contents are only read the first time. Every header you write should have one. Many compilers also support the shorter, non-standard but very widely used `#pragma once` at the top of a header, which does the same job.
+
+### What goes where
+
+| Put in the header | Put in the .cpp file |
+|---|---|
+| struct and enum definitions | function bodies |
+| function prototypes | helper functions used only in this file (mark them `static`) |
+| `const` values that other files need | `using namespace std;` |
+| `#include`s that the header itself needs | `#include`s needed only by the code here |
+
+:::watch
+Never put a normal function **definition** (with a body) in a header that several `.cpp` files include. Each `.cpp` file would get its own copy, and the linker would complain about a **multiple definition**. And never write `using namespace std;` in a header: every file that includes it would be forced to accept it. That is why headers write `std::string` in full.
+:::
+
+## Compiling and linking several files
+
+Give g++ **all** the `.cpp` files. Do not list the headers; they are pulled in by `#include`.
+
+```text
+g++ -std=c++17 -Wall money.cpp main.cpp -o shop
+```
+
+Behind the scenes, each `.cpp` file is compiled separately into an **object file**, and then the linker joins them. You can do the two steps yourself, which is what build tools do for big projects:
+
+```text
+g++ -std=c++17 -Wall -c money.cpp       (creates money.o)
+g++ -std=c++17 -Wall -c main.cpp        (creates main.o)
+g++ money.o main.o -o shop              (links them into shop)
+```
+
+If you change only `main.cpp`, you only need to recompile `main.o` and link again. With hundreds of files, that saves a lot of time.
+
+:::nodumb
+Q: I get "undefined reference to formatRupees". The header is included!
+A: The header only **declares** the function. The linker also needs the **definition**, which lives in `money.cpp`. You probably forgot to put `money.cpp` on the g++ command line (or in your IDE project). Including a header is not the same as compiling its source file.
+
+Q: Do I really type all those commands for big projects?
+A: No. Projects use **build tools**. A **Makefile** lists the files and how to build them, and the `make` command rebuilds only what changed. Larger projects use **CMake**, which generates build files for many systems. IDEs such as Visual Studio and CLion build multi-file projects with one click.
+:::
+
+## Debugging like a professional
+
+So far you have debugged by reading error messages and adding `cout` lines. Those are good skills. Here are three more.
+
+### 1. Use a debugger
+
+A **debugger** lets you pause your program, run it one line at a time, and look at every variable while it runs. Every serious IDE has one (VS Code, Visual Studio, CLion, Code::Blocks), and on the command line there is **gdb**. First, compile with `-g` to include debugging information:
+
+```text
+g++ -std=c++17 -Wall -g main.cpp -o shop
+gdb ./shop
+```
+
+The most useful gdb commands:
+
+| Command | What it does |
+|---|---|
+| `break main` or `break 42` | pause when the program reaches `main`, or line 42 |
+| `run` | start the program |
+| `next` | run the next line (stepping over function calls) |
+| `step` | run the next line, stepping **into** function calls |
+| `print total` | show the value of a variable |
+| `backtrace` | show the call stack (Chapter 10), very useful after a crash |
+| `continue` | run until the next breakpoint |
+| `quit` | leave gdb |
+
+In an IDE, you get the same features with buttons: click in the margin to set a **breakpoint**, press the debug button, and hover over variables to see their values.
+
+### 2. Check your assumptions with assert
+
+`assert` (from `<cassert>`) checks a condition while the program runs. If the condition is false, the program stops immediately and tells you the file and line. It is perfect for catching "this should never happen" situations, and for small automatic tests.
+
+```cpp run title=asserts.cpp
+#include <iostream>
+#include <cassert>
+using namespace std;
+
+double applyDiscount(double amount, double percent) {
+    assert(percent >= 0 && percent <= 100);     //@ a rule the caller must follow
+    return amount - amount * percent / 100;
+}
+
+int main() {
+    // tiny automatic tests
+    assert(applyDiscount(1000, 10) == 900);
+    assert(applyDiscount(1000, 0) == 1000);
+    assert(applyDiscount(500, 100) == 0);
+    cout << "All tests passed." << endl;
+    return 0;
+}
+```
+
+```output
+All tests passed.
+```
+
+If a test fails, you see something like `Assertion 'applyDiscount(1000, 0) == 1000' failed`, with the file and line number. Assertions are for catching **programmer mistakes**, not for handling bad user input: they can be switched off for release builds by defining `NDEBUG`. For user input, use the validation loops from Chapter 8.
+
+:::industry
+Professional teams write **unit tests** for their functions, using frameworks such as GoogleTest or Catch2, and run them automatically every time someone changes the code. If a change breaks an old feature, the tests catch it within minutes. Writing small, single-purpose functions (Chapter 9) is what makes testing possible.
+:::
+
+### 3. Handle errors with exceptions (a first look)
+
+You have already met **exceptions**: `stoi("abc")` and `v.at(99)` **throw** one when something goes wrong. If nothing **catches** it, the program stops. A `try` / `catch` block lets you catch it and recover:
+
+```cpp run title=exceptions.cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    string texts[3] = {"42", "abc", "7"};
+    for (const string &t : texts) {
+        try {
+            int n = stoi(t);                       //@ may throw
+            cout << t << " -> " << n << endl;
+        } catch (const exception &e) {             //@ jump here if it throws
+            cout << t << " -> not a number, skipped" << endl;
+        }
+    }
+    return 0;
+}
+```
+
+```output
+42 -> 42
+abc -> not a number, skipped
+7 -> 7
+```
+
+The capstone project below uses exactly this, so that one corrupted line in a data file does not crash the whole program. Exceptions are covered properly in object-oriented programming courses.
+
+## The capstone: Ruwan Stores Manager
+
+Here it is: the program Amaya promised her uncle in the very first chapter. It brings together nearly everything in this book.
+
+| Feature | Chapters used |
+|---|---|
+| Menu loop with validated input | 7, 8 |
+| Product records | 3, 14 |
+| Inventory in a vector, searching and sorting | 11, 13 |
+| Case-insensitive name search | 12 |
+| Functions with const references and references | 9, 10 |
+| Loading and saving CSV files, appending a sales log | 16 |
+| Multi-file layout with headers | 17 |
+
+### The data file
+
+The program keeps its products in `inventory.csv`, in the same folder as the program. Create this file before the first run (or let the program start empty and add products):
+
+```file inventory.csv seed
+code,name,price,stock
+R001,Red Rice 1kg,230.50,42
+O001,Coconut Oil 750ml,690.00,8
+S001,Soap Bar,145.00,25
+T001,Ceylon Tea 200g,520.00,4
+```
+
+### product.h and product.cpp
+
+A `Product` struct, and two functions that convert a product to and from one line of CSV.
+
+```cpp group=shop file=product.h title=product.h
+{{FILE:product.h}}
+```
+
+```cpp group=shop file=product.cpp title=product.cpp
+{{FILE:product.cpp}}
+```
+
+`catch (...)` with three dots catches **any** exception. Here it means "if either number is corrupted, report that this line could not be read".
+
+### inventory.h and inventory.cpp
+
+Everything that works on the whole list of products: loading, saving, finding, searching and printing.
+
+```cpp group=shop file=inventory.h title=inventory.h
+{{FILE:inventory.h}}
+```
+
+```cpp group=shop file=inventory.cpp title=inventory.cpp
+{{FILE:inventory.cpp}}
+```
+
+Notice `static string lower(...)`. Here, `static` on a function means something different from Chapter 10's static local variables: the function is **private to this file**, so it cannot clash with a `lower` function anywhere else in the project.
+
+### input.h and input.cpp
+
+The validation loops from Chapter 8, packaged as reusable functions. Every `cin >>` is followed by `cin.ignore`, so the getline trap can never happen anywhere in the program.
+
+```cpp group=shop file=input.h title=input.h
+{{FILE:input.h}}
+```
+
+```cpp group=shop file=input.cpp title=input.cpp
+{{FILE:input.cpp}}
+```
+
+If input runs out completely (end of file), the functions call `exit(1)` from `<cstdlib>` instead of looping forever.
+
+### main.cpp
+
+`main` is short and readable, because each menu option is its own function.
+
+```cpp group=shop file=main.cpp run expectfile=inventory.csv expectfile=sales.csv title=main.cpp
+{{FILE:main.cpp}}
+```
+
+Look at `recordSale`: `Product &p = items[i];` creates a **reference** to the product inside the vector, so `p.stock -= qty;` changes the real stock. Without the `&`, the program would change a copy and the sale would vanish.
+
+### Build and run
+
+```text
+g++ -std=c++17 -Wall -Wextra product.cpp inventory.cpp input.cpp main.cpp -o shop
+./shop
+```
+
+Here is a real session. Look for the invalid quantity being rejected, and the new product being added.
+
+```output
+=== RUWAN STORES MANAGER ===  (4 products loaded)
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[1]]
+Sort by 1) code 2) name 3) price 4) stock: [[2]]
+Code    Name                       Price  Stock
+-----------------------------------------------
+T001    Ceylon Tea 200g           520.00      4  LOW
+O001    Coconut Oil 750ml         690.00      8  LOW
+R001    Red Rice 1kg              230.50     42
+S001    Soap Bar                  145.00     25
+Stock value: Rs. 20906.00
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[2]]
+Search for: [[oil]]
+Code    Name                       Price  Stock
+-----------------------------------------------
+O001    Coconut Oil 750ml         690.00      8  LOW
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[4]]
+Product code: [[O001]]
+Quantity (1-8): [[12]]
+Please enter a whole number from 1 to 8.
+Quantity (1-8): [[3]]
+Sold 3 x Coconut Oil 750ml = Rs. 2070.00
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[5]]
+Product code: [[T001]]
+Quantity received: [[20]]
+Ceylon Tea 200g now has 24 in stock.
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[3]]
+New code: [[D001]]
+Name: [[Dhal 500g]]
+Price (Rs.): [[320]]
+Opening stock: [[15]]
+Added Dhal 500g.
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[6]]
+Code    Name                       Price  Stock
+-----------------------------------------------
+O001    Coconut Oil 750ml         690.00      5  LOW
+
+1 List  2 Search  3 Add  4 Sale  5 Restock  6 Low stock  0 Save and exit
+Choice: [[0]]
+Saved 5 products. Goodbye!
+```
+
+And the files it left behind:
+
+```file inventory.csv result
+code,name,price,stock
+T001,Ceylon Tea 200g,520.00,24
+O001,Coconut Oil 750ml,690.00,5
+R001,Red Rice 1kg,230.50,42
+S001,Soap Bar,145.00,25
+D001,Dhal 500g,320.00,15
+```
+
+```file sales.csv result
+O001,3,2070.00
+```
+
+Run it again, and all five products are still there. Ruwan Stores finally has a memory.
+
+:::story
+Ruwan: *(scrolling through the low stock report)* It told me the oil is low before I even noticed. Very good, child. Very good.
+
+Amaya: And next I can add receipts, daily totals, customer points...
+
+Nuwan: That is how every real piece of software grows. One feature at a time, tested, saved, and then the next one.
+
+Dilshan: Can I have a copy for my tuk-tuk business?
+:::
+
+:::project Make it yours
+Pick at least three of these features and add them to the Ruwan Stores Manager. Each one uses skills from a specific chapter.
+
+1. **Delete a product** by code, with a confirmation question ("Are you sure? y/n"). (Chapters 7 and 11: `erase`.)
+2. **Edit a price**, rejecting prices that are zero or negative. (Chapter 8.)
+3. **Daily report:** read `sales.csv` and print the number of sales, the total takings and the best-selling product. (Chapters 11 and 16.)
+4. **Receipts:** when a sale is made, also write a nicely formatted receipt to a file called `receipt_<number>.txt`, using a static counter or the number of lines in `sales.csv`. (Chapters 4, 10 and 16.)
+5. **Categories:** add an `enum class Category` to `Product`, store it in the CSV file as a word, and let the user list one category at a time. (Chapter 14.)
+6. **Safe saving:** save to `inventory.tmp` first, and only replace `inventory.csv` if writing succeeded. (Use `std::rename` from `<cstdio>`.)
+7. **Tests:** write a separate `tests.cpp` with a `main` that uses `assert` to test `toCsv`, `fromCsv`, `findByCode` and `searchByName`, and compile it together with `product.cpp` and `inventory.cpp`.
+:::
+
+## Writing code that others can read
+
+You will spend far more of your career **reading** code than writing it. Write the code you would like to read:
+
+- **Names that explain:** `lowStockReport`, not `f3`; `itemCount`, not `ic`.
+- **Small functions** that each do one job.
+- **Consistent formatting:** the same indentation, brace style and spacing everywhere. Tools like **clang-format** do this automatically.
+- **Comments that explain why**, not what.
+- **No magic numbers:** `const int LOW_STOCK_LIMIT = 10;` instead of a mysterious `10` in five places.
+- **Compile with warnings** (`-Wall -Wextra`) and fix them all.
+
+:::industry
+Professional developers keep every version of their code in a **version control system**, almost always **Git**, hosted on services such as GitHub or GitLab. Every change is saved as a **commit** with a message explaining it, so you can see who changed what and why, and undo mistakes. Teams work on separate **branches** and merge their changes after review. Start using Git for your own projects now; your future employers will expect it.
+:::
+
+## Where to go from here
+
+You have covered the core of programming in C++. Here is what comes next on the journey:
+
+| Next topic | What it adds | You are ready because you know... |
+|---|---|---|
+| **Object-oriented programming** | classes, encapsulation, constructors, inheritance, polymorphism | structs with member functions (Chapter 14) |
+| **The Standard Template Library** | `map`, `set`, `unordered_map`, `queue`, `stack`, more algorithms | vectors, iterators and `sort` (Chapters 11 and 13) |
+| **Data structures and algorithms** | linked lists, trees, graphs, hashing, merge sort, quicksort, dynamic programming | pointers, recursion and Big-O (Chapters 8, 10, 13, 15) |
+| **Modern C++** | move semantics, smart pointers in depth, templates, lambdas, ranges | RAII and `unique_ptr` (Chapter 15) |
+| **Problem solving practice** | speed and confidence | everything in this book |
+
+For practice, online judges such as **HackerRank**, **LeetCode** and **Codeforces** offer thousands of problems with automatic marking. Start with the easy ones, and solve at least one problem every few days. Programming is a skill like music or sport: it grows with regular practice, not with reading alone.
+
+:::relax
+Remember Chapter 1? You could not write a single line of code then. Now you can design an algorithm, write it in C++, split it into modules, test it, debug it and save its data to files. That is a real achievement. Well done.
+:::
+
+:::quiz
+? What normally goes in a header (.h) file?
+- Function bodies and main
+* Struct definitions and function prototypes
+- Only comments
+- The compiled program
+> Headers declare what exists; .cpp files define how it works.
+
+? What do include guards prevent?
+- Viruses
+- Compiling .cpp files
+* The same header being processed twice in one compilation
+- Using namespace std
+> #ifndef / #define / #endif makes the contents appear only once.
+
+? You get "undefined reference to readInt" when building. What is the most likely cause?
+- input.h is missing #pragma once
+* input.cpp was not included in the build command
+- readInt has the wrong return type in main
+- The program needs more RAM
+> The declaration was found, but the linker could not find the definition.
+
+? What does compiling with -g do?
+- Makes the program faster
+- Turns on all warnings
+* Adds debugging information so a debugger can show lines and variables
+- Creates a graphical program
+> -g is for debugging; -Wall is for warnings.
+
+? What happens when assert(condition) fails?
+- Nothing
+- It prints a warning and continues
+* The program stops and reports the failed condition with its file and line
+- It throws an exception that is always caught
+> assert is a check for programmer mistakes during development.
+:::
+
+:::bullets
+- Split programs into modules: **headers** (`.h`) for declarations, **source files** (`.cpp`) for definitions.
+- Protect every header with an **include guard** (or `#pragma once`). Never write `using namespace std;` in a header.
+- Use `#include "file.h"` for your own headers and `#include <name>` for the standard library.
+- Compile **all** `.cpp` files together, or compile each with `-c` and link the object files.
+- "Undefined reference" usually means a missing `.cpp` file in the build.
+- Debug with **breakpoints**, stepping and printing variables (compile with `-g`). Use **`assert`** to test assumptions.
+- `try` / `catch` handles **exceptions** such as those thrown by `stoi` and `.at()`.
+- Keep growing your project one tested feature at a time, and keep it in **Git**.
+:::
