@@ -1,4 +1,17 @@
-# Hands-On C++
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+    <img src="assets/logo.png" alt="Uditha Landekumbura" width="240">
+  </picture>
+</p>
+
+<h1 align="center">Hands-On C++</h1>
+
+<p align="center">
+  <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-blue.svg"></a>
+  <a href="LICENSE-CONTENT"><img alt="Content: CC BY-NC-SA 4.0" src="https://img.shields.io/badge/content-CC%20BY--NC--SA%204.0-lightgrey.svg"></a>
+  <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-orange.svg">
+</p>
 
 *A brain-friendly handbook for learning C++, from your first line of code to a complete multi-file project.*
 
@@ -63,6 +76,19 @@ make
 ## Contributing
 
 Corrections and suggestions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+## License
+
+This repository uses two licences:
+
+| What | Licence |
+|---|---|
+| Source code: `tools/`, `capstone/` and the C++ code examples in the book | [MIT](LICENSE) |
+| Book content: the text in `content/` and the web and PDF editions | [CC BY-NC-SA 4.0](LICENSE-CONTENT) |
+
+In short, you may share and adapt the book for non-commercial purposes, as long as you credit Uditha Landekumbura and share your adaptations under the same licence. The code may be used for any purpose under the MIT terms.
+
+The author's name and logo (`assets/logo.png`, `assets/logo-dark.png`) are not covered by either licence. All rights in them are reserved.
 
 ## Author
 
