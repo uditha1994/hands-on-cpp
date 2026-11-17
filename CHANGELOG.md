@@ -11,3 +11,4 @@ All notable changes to this book are recorded here. The format follows [Keep a C
 - Printable A4 PDF edition with a cover, a contents page with page numbers and branded footers.
 - Ruwan Stores Manager capstone project as a standalone multi-file program.
 - Automatic verification of every code example, run in CI on each pull request.
+- Licensing: MIT for code, CC BY-NC-SA 4.0 for book content.

@@ -106,3 +106,13 @@ The appendices at the end give you quick-reference cheat sheets, a guide to comm
 :::relax
 You do not have to understand everything the first time. Some ideas, like references and pointers, take two or three passes before they click. That is completely normal. Keep going, and come back later.
 :::
+
+## Copyright and licence
+
+Copyright © 2026 Uditha Landekumbura.
+
+The text of this book is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** licence (CC BY-NC-SA 4.0). You may share and adapt it for non-commercial purposes, as long as you give credit and share your changes under the same licence. The full terms are at creativecommons.org/licenses/by-nc-sa/4.0.
+
+The C++ code examples and the capstone project may be reused under the **MIT licence**. The author's name and logo are not covered by either licence.
+
+The source of this book is maintained at github.com/uditha1994/hands-on-cpp.
