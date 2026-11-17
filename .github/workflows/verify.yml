@@ -1,0 +1,28 @@
+name: Verify code examples
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: python -m pip install -r requirements.txt
+
+      - name: Show compiler version
+        run: g++ --version
+
+      - name: Compile and run every example in the book
+        run: make verify
+
+      - name: Build the capstone project
+        run: make capstone

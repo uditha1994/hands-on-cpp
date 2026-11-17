@@ -1,0 +1,53 @@
+name: Build and release the book
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install -r requirements.txt
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Verify examples
+        run: make verify
+
+      - name: Build web and PDF editions
+        run: |
+          make web
+          make pdf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hands-on-cpp
+          path: dist/
+
+      - name: Attach files to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/Hands-On_Cpp_Uditha_Landekumbura.pdf
+            dist/Hands-On_Cpp_Handbook.html
